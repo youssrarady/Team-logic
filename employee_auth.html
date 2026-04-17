@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Portal</title>
+    <style>
+        body { background: #0A192F; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-card { background: #112240; padding: 40px; border-radius: 15px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; background: #0A192F; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; background: #64FFDA; border: none; color: #0A192F; font-weight: bold; cursor: pointer; border-radius: 6px; margin-top: 10px; }
+        .toggle-link { color: #64FFDA; cursor: pointer; display: block; margin-top: 15px; font-size: 14px; text-align: center; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #8892B0; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="auth-card" id="authBox">
+        <h2 id="authTitle" style="text-align: center;">Employee Login</h2>
+        <input type="text" id="empId" placeholder="Employee ID">
+        <input type="password" id="pass" placeholder="Password">
+        
+        <div id="signupFields" style="display:none;">
+            <input type="text" id="empName" placeholder="Full Name">
+            <select id="empRole">
+                <option value="Employee">Employee</option>
+                <option value="Secretary">Secretary</option>
+            </select>
+        </div>
+
+        <button class="btn" onclick="handleAuth()">Login</button>
+        <span class="toggle-link" onclick="toggleAuth()">Don't have an account? Sign Up</span>
+        <a href="index.html" class="back-link">Return to Home</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="config.js"></script> 
+    <script>
+        let isLogin = true;
+        function toggleAuth() {
+            isLogin = !isLogin;
+            document.getElementById('authTitle').innerText = isLogin ? "Employee Login" : "New Registration";
+            document.getElementById('signupFields').style.display = isLogin ? "none" : "block";
+            document.querySelector('.btn').innerText = isLogin ? "Login" : "Sign Up";
+            document.querySelector('.toggle-link').innerText = isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login";
+        }
+
+        async function handleAuth() {
+            const id = document.getElementById('empId').value;
+            const pass = document.getElementById('pass').value;
+            
+            if(!id || !pass) {
+                alert("Please enter ID and password.");
+                return;
+            }
+
+            if(!isLogin) {
+                const name = document.getElementById('empName').value;
+                const role = document.getElementById('empRole').value;
+                if(!name) { alert("Please enter Full Name."); return; }
+                
+                // Layered Approval
+                const pendingStatus = (role === 'Secretary') ? 'pending_admin' : 'pending_secretary';
+
+                await db.collection('users').doc(id).set({ name, password: pass, role: role, status: pendingStatus });
+                alert(`Request sent! Waiting for ${role === 'Secretary' ? 'Admin' : 'Secretary'} approval.`);
+                toggleAuth(); 
+            } else {
+                const user = await db.collection('users').doc(id).get();
+                if(user.exists && user.data().password === pass) {
+                    if (user.data().status === 'active') {
+                        localStorage.setItem('employeeId', id);
+                        localStorage.setItem('userRole', user.data().role);
+                        localStorage.setItem('userName', user.data().name);
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        alert("Account is pending approval!");
+                    }
+                } else {
+                    alert("Invalid account or password!");
+                }
+            }
+        }
+    </script>
+</body>
+</html>

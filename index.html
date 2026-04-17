@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Academy Staff Portal</title>
+    <style>
+        body { background: #0A192F; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; }
+        .header-img { 
+            width: 200px; 
+            height: 200px; 
+            margin: 0 auto 40px auto; 
+            border-radius: 25px; 
+            box-shadow: 0 0 30px rgba(100, 255, 218, 0.3); 
+            background-color: white; 
+            padding: 10px; 
+            display: block;
+            object-fit: contain;
+        }
+        .container { margin-top: 50px; }
+        .btn-choice { 
+            padding: 20px 50px; font-size: 22px; margin: 20px; cursor: pointer;
+            border: 2px solid #64FFDA; background: none; color: #64FFDA; border-radius: 12px;
+            transition: 0.3s; width: 300px; font-weight: bold;
+        }
+        .btn-choice:hover { background: #64FFDA; color: #0A192F; box-shadow: 0 0 20px #64FFDA; }
+    </style>
+</head>
+<body>
+    
+    <div class="container">
+        <img src="https://play-lh.googleusercontent.com/gwBHxA6ELf257zTnY8t8U5Beuxl6Aghj1ah_tAZZ08beNPDpIt7TcgQyk4T6RfmgQJA" alt="AAST Staff Portal" class="header-img">
+        <button class="btn-choice" onclick="window.location.href='admin_login.html'">Branch Director Portal</button>
+        <br>
+        <button class="btn-choice" onclick="window.location.href='admin_login.html'">Admin Portal</button>
+        <br>
+        <button class="btn-choice" onclick="window.location.href='employee_auth.html'">Employee Portal</button>
+    </div>
+</body>
+</html>

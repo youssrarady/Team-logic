@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AASTMT Dashboard</title>
+    <style>
+        :root { --navy: #0A192F; --light: #112240; --accent: #64FFDA; --text: #CCD6F6; --danger: #ef4444; }
+        body { background: var(--navy); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        .card { background: var(--light); padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .btn { padding: 10px 20px; cursor: pointer; border-radius: 6px; border: none; font-weight: bold; margin: 5px; }
+        .btn-primary { background: var(--accent); color: var(--navy); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        input, select { padding: 10px; background: var(--navy); color: white; border: 1px solid var(--text); border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid var(--text); padding: 10px; text-align: left; }
+        th { background: var(--navy); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--light); padding-bottom: 10px; }
+        .tab-btn { background: var(--light); color: var(--text); border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px 5px 0 0; }
+        .tab-btn.active { background: var(--accent); color: var(--navy); font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .cal-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); gap: 2px; background: var(--text); border: 1px solid var(--text); }
+        .cal-cell { background: var(--navy); padding: 10px; min-height: 40px; text-align: center; font-size: 12px; }
+        .cal-header { background: var(--light); font-weight: bold; }
+        .event-blue { background: #3b82f6; color: white; border-radius: 4px; padding: 2px; margin: 2px; }
+        .event-green { background: #10b981; color: white; border-radius: 4px; padding: 2px; margin: 2px; }
+        .event-yellow { background: #f59e0b; color: white; border-radius: 4px; padding: 2px; margin: 2px; color: black; }
+        
+        #vipNotifications { border-left: 4px solid var(--danger); padding: 10px; background: rgba(239, 68, 68, 0.1); margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--light); padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 id="welcome">Welcome</h2>
+        <div>
+            <span id="roleBadge" style="background: var(--accent); color: var(--navy); padding: 5px 10px; border-radius: 15px; margin-right: 15px; font-size: 14px; font-weight: bold;"></span>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- STANDARD USER VIEW (Employee / Secretary) -->
+    <div id="standardView" style="display:none;">
+        
+        <!-- Pending Users for Secretary -->
+        <div id="secretaryApprovals" class="card" style="display:none; border: 1px solid var(--accent);">
+            <h3>Pending Employee Registrations</h3>
+            <div id="pendingEmployeesList">Loading...</div>
+        </div>
+
+        <div id="bookingForm" class="card">
+            <h3>Room Booking Form</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                <input type="date" id="date" onchange="checkTime()">
+                <input type="time" id="timeFrom" onchange="checkTime()">
+                <input type="time" id="timeTo" onchange="checkTime()">
+                <select id="rooms" onchange="checkTime()"></select>
+                <select id="purpose">
+                    <option value="Exceptional Lecture">Exceptional Lecture</option>
+                    <option value="Event">Event (Multi-Purpose)</option>
+                    <option value="Meeting">Meeting</option>
+                </select>
+                <button id="subBtn" class="btn btn-primary" onclick="submitBooking()">Submit Request</button>
+            </div>
+            <p id="timeWarning" style="color: var(--danger); font-size: 12px; margin-top: 10px;"></p>
+        </div>
+
+        <div id="standardAvailability" class="card" style="display:none;">
+            <h3>Available Rooms (Admin Override Active)</h3>
+            <p style="color: var(--accent); font-size: 12px;">You have been granted special permission to view availability.</p>
+            <div id="availList">Availability Module Visible.</div>
+        </div>
+
+        <div class="card">
+            <h3>My Requests History</h3>
+            <div id="history"></div>
+        </div>
+    </div>
+
+    <!-- ADMIN VIEW -->
+    <div id="adminView" style="display:none;">
+        <div id="vipNotifications" style="display: none;"></div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchAdminTab(this, 'tabCalendar')">Calendar Grid</button>
+            <button class="tab-btn" onclick="switchAdminTab(this, 'tabRequests')">Booking Requests</button>
+            <button class="tab-btn" onclick="switchAdminTab(this, 'tabSearch')">Empty Rooms Search</button>
+            <button class="tab-btn" onclick="switchAdminTab(this, 'tabUsers')">User Management</button>
+            <button class="tab-btn" onclick="switchAdminTab(this, 'tabReports')">Morning Report</button>
+        </div>
+
+        <!-- Admin Tab: Calendar -->
+        <div id="tabCalendar" class="tab-content active card">
+            <h3>Weekly Schedule Overview</h3>
+            <div class="cal-grid" id="calendarGrid"></div>
+        </div>
+
+        <!-- Admin Tab: Requests -->
+        <div id="tabRequests" class="tab-content card">
+            <h3>Pending Room Requests</h3>
+            <div id="adminRequests"></div>
+        </div>
+
+        <!-- Admin Tab: Search -->
+        <div id="tabSearch" class="tab-content card">
+            <h3>Advanced Search (Find Empty Rooms)</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="date" id="searchDate">
+                <input type="time" id="searchTime">
+                <button class="btn btn-primary" onclick="searchEmptyRooms()">Search Availability</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <!-- Admin Tab: User Management -->
+        <div id="tabUsers" class="tab-content card">
+            <h3>Pending Secretary Registrations</h3>
+            <div id="pendingSecretaries" style="margin-bottom: 20px; border-bottom: 1px solid var(--text); padding-bottom: 10px;"></div>
+            
+            <h3>Active Employees (Delegation & Overrides)</h3>
+            <table id="usersTable">
+                <tr><th>Name/ID</th><th>Role</th><th>View Override</th><th>Delegation (Substitute ID)</th><th>Dates</th><th>Actions</th></tr>
+            </table>
+        </div>
+
+        <!-- Admin Tab: Reports -->
+        <div id="tabReports" class="tab-content card">
+            <h3>Daily Morning Report</h3>
+            <button class="btn btn-outline" onclick="generateDailyReport()">Generate Report for Today</button>
+            <div id="reportContent" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- BRANCH DIRECTOR VIEW (Faisal) -->
+    <div id="branchDirectorView" style="display:none;">
+        <div class="card" style="border: 1px solid var(--accent);">
+            <h3>Pending Multi-Purpose Room Approvals</h3>
+            <p style="font-size: 13px; color: var(--text);">Final approval required for all MP rooms.</p>
+            <div id="bdRequests"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="config.js"></script>
+
+    <script>
+        const uID = localStorage.getItem('employeeId');
+        let uRole = localStorage.getItem('userRole');
+        const uName = localStorage.getItem('userName');
+
+        if(!uRole) window.location.href = 'index.html';
+
+        document.getElementById('welcome').innerText = `Welcome, ${uName}`;
+        document.getElementById('roleBadge').innerText = uRole;
+
+        const allRooms = ["Lecture Room A", "Lecture Room B", "Conference Hall (MP)", "Seminar Room (MP)"];
+
+        async function init() {
+            if (uRole === 'Employee' || uRole === 'Secretary') {
+                const myDoc = await db.collection('users').doc(uID).get();
+                if (myDoc.exists && myDoc.data().canViewAvailability) {
+                    document.getElementById('standardAvailability').style.display = 'block';
+                }
+            }
+
+            if (uRole === 'Admin' || uRole === 'Branch Director' || uRole === 'Head') {
+                if (uRole === 'Head') uRole = 'Branch Director'; // Normalize role
+                localStorage.setItem('userRole', uRole); // Save normalized role
+
+                document.getElementById('adminView').style.display = 'block';
+                loadPendingUsers('pending_admin', 'pendingSecretaries');
+                loadAdminRequests();
+                buildCalendar();
+                loadActiveUsers();
+                listenForVIPNotifications();
+
+                if (uRole === 'Branch Director') {
+                    document.getElementById('branchDirectorView').style.display = 'block';
+                    loadBDRequests();
+                }
+            } else {
+                document.getElementById('standardView').style.display = 'block';
+                setupBookingForm();
+                loadHistory();
+                if (uRole === 'Secretary') {
+                    document.getElementById('secretaryApprovals').style.display = 'block';
+                    loadPendingUsers('pending_secretary', 'pendingEmployeesList');
+                }
+            }
+        }
+
+        // --- UI UTILS ---
+        function switchAdminTab(btn, tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // --- REGISTRATION APPROVAL ---
+        async function loadPendingUsers(statusFilter, containerId) {
+            const snap = await db.collection('users').where('status','==',statusFilter).get();
+            let h = '';
+            snap.forEach(doc => {
+                h += `<div style="margin: 10px 0;">${doc.data().name} (${doc.id}) <button class="btn btn-primary" onclick="activateUser('${doc.id}', '${statusFilter}', '${containerId}')">Approve</button></div>`;
+            });
+            document.getElementById(containerId).innerHTML = h || 'No pending registrations.';
+        }
+
+        async function activateUser(id, statusFilter, containerId) {
+            await db.collection('users').doc(id).update({status:'active'});
+            alert("User Activated Successfully!");
+            loadPendingUsers(statusFilter, containerId);
+            if(uRole === 'Admin') loadActiveUsers();
+        }
+
+        // --- BOOKING LOGIC ---
+        function setupBookingForm() {
+            const rSelect = document.getElementById('rooms');
+            rSelect.innerHTML = '<option value="">Select Room...</option>';
+            allRooms.forEach(r => {
+                if(uRole === 'Secretary' && !r.includes('(MP)')) return;
+                rSelect.add(new Option(r, r));
+            });
+        }
+
+        function checkTime() {
+            const dateVal = document.getElementById('date').value;
+            const timeFrom = document.getElementById('timeFrom').value;
+            const btn = document.getElementById('subBtn');
+            const warn = document.getElementById('timeWarning');
+            
+            if(!dateVal || !timeFrom) return;
+
+            const d = new Date(`${dateVal}T${timeFrom}`);
+            const diffHours = (d - new Date()) / (1000*60*60);
+            
+            btn.disabled = false;
+            warn.innerText = "";
+            btn.style.background = 'var(--accent)';
+            btn.style.color = 'var(--navy)';
+            btn.innerText = "Submit Request";
+
+            if (uRole === 'Secretary' && diffHours < 48) {
+                btn.disabled = true; 
+                warn.innerText = "Secretaries must book MP rooms at least 48 hours in advance.";
+                btn.style.background = 'var(--danger)'; btn.style.color = 'white'; btn.innerText = "Blocked (48h Rule)";
+            } else if (uRole === 'Employee' && diffHours < 24) {
+                btn.disabled = true; 
+                warn.innerText = "Employees must book rooms at least 24 hours in advance.";
+                btn.style.background = 'var(--danger)'; btn.style.color = 'white'; btn.innerText = "Blocked (24h Rule)";
+            }
+        }
+
+        async function submitBooking() {
+            const room = document.getElementById('rooms').value;
+            const date = document.getElementById('date').value;
+            const timeFrom = document.getElementById('timeFrom').value;
+            const timeTo = document.getElementById('timeTo').value;
+            const purpose = document.getElementById('purpose').value;
+
+            if(!room || !date || !timeFrom || !timeTo) { alert("Please fill all fields!"); return; }
+
+            // Constraint: Lecture rooms cannot be booked for MP events
+            if (!room.includes('(MP)') && purpose === 'Event') {
+                alert("Lecture rooms cannot be booked for Multi-Purpose events.");
+                return;
+            }
+
+            let status = 'pending';
+            if (room.includes('(MP)')) {
+                status = 'pending_branch_director'; 
+            }
+
+            await db.collection('bookings').add({
+                uID, uName, room, date, timeFrom, timeTo, purpose,
+                status: status,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert("Request Submitted successfully!");
+            if(uRole !== 'Admin' && uRole !== 'Branch Director') loadHistory();
+        }
+
+        async function loadHistory() {
+            const snap = await db.collection('bookings').where('uID', '==', uID).get();
+            let h = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                h += `<div style="margin: 10px 0; padding: 10px; background: var(--navy); border-radius: 6px;">
+                        <strong>${data.room}</strong> on ${data.date} (${data.timeFrom}-${data.timeTo}) - <span style="color: yellow">${data.status}</span>
+                      </div>`;
+            });
+            document.getElementById('history').innerHTML = h || '<p>No history available.</p>';
+        }
+
+        // --- ADMIN SPECIFIC LOGIC ---
+        async function loadActiveUsers() {
+            const snap = await db.collection('users').where('status','==','active').get();
+            let tbl = `<tr><th>Name/ID</th><th>Role</th><th>View Override</th><th>Delegation (Substitute ID)</th><th>Dates</th><th>Actions</th></tr>`;
+            snap.forEach(doc => {
+                const data = doc.data();
+                const checked = data.canViewAvailability ? 'checked' : '';
+                tbl += `<tr>
+                    <td>${data.name} <br><small>${doc.id}</small></td>
+                    <td>${data.role}</td>
+                    <td><input type="checkbox" id="ov_${doc.id}" ${checked}> View</td>
+                    <td><input type="text" id="delId_${doc.id}" value="${data.delegateId || ''}"></td>
+                    <td>
+                        <input type="date" id="delStart_${doc.id}" value="${data.delegateStart || ''}"><br>
+                        <input type="date" id="delEnd_${doc.id}" value="${data.delegateEnd || ''}">
+                    </td>
+                    <td><button class="btn btn-outline" onclick="saveUserConfig('${doc.id}')">Save</button></td>
+                </tr>`;
+            });
+            document.getElementById('usersTable').innerHTML = tbl;
+        }
+
+        async function saveUserConfig(id) {
+            await db.collection('users').doc(id).update({
+                canViewAvailability: document.getElementById(`ov_${id}`).checked,
+                delegateId: document.getElementById(`delId_${id}`).value,
+                delegateStart: document.getElementById(`delStart_${id}`).value,
+                delegateEnd: document.getElementById(`delEnd_${id}`).value
+            });
+            alert("Configuration Saved!");
+        }
+
+        async function loadAdminRequests() {
+            const snap = await db.collection('bookings').where('status','==','pending').get();
+            let h = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                h += `<div style="margin: 10px 0; padding: 10px; background: var(--navy); border-radius: 6px;">
+                        <strong>${data.room}</strong> by ${data.uName} on ${data.date} (${data.timeFrom}-${data.timeTo})
+                        <button class="btn btn-primary" onclick="updateBooking('${doc.id}', 'approved')">Approve</button>
+                        <button class="btn btn-danger" onclick="rejectBooking('${doc.id}')">Reject</button>
+                      </div>`;
+            });
+            document.getElementById('adminRequests').innerHTML = h || '<p>No pending room requests.</p>';
+        }
+
+        async function updateBooking(id, status) {
+            await db.collection('bookings').doc(id).update({status});
+            alert("Booking Updated!");
+            loadAdminRequests();
+            buildCalendar();
+        }
+
+        async function rejectBooking(id) {
+            const reason = prompt("Enter rejection reason:");
+            if(reason) updateBooking(id, 'rejected: ' + reason);
+        }
+
+        async function searchEmptyRooms() {
+            const sDate = document.getElementById('searchDate').value;
+            const sTime = document.getElementById('searchTime').value;
+            if(!sDate || !sTime) { alert("Enter date and time."); return; }
+
+            const snap = await db.collection('bookings').where('date','==',sDate).where('status','==','approved').get();
+            const booked = [];
+            snap.forEach(doc => {
+                if(sTime >= doc.data().timeFrom && sTime <= doc.data().timeTo) booked.push(doc.data().room);
+            });
+
+            const empty = allRooms.filter(r => !booked.includes(r));
+            document.getElementById('searchResults').innerHTML = empty.length > 0 
+                ? `Available Rooms:<br>` + empty.map(r => `• ${r}`).join('<br>')
+                : '<span style="color:var(--danger)">No rooms available.</span>';
+        }
+
+        async function generateDailyReport() {
+            const today = new Date().toISOString().split('T')[0];
+            const snap = await db.collection('bookings').where('date','==',today).where('status','==','approved').get();
+            let h = '<ul>';
+            snap.forEach(doc => {
+                const data = doc.data();
+                if(data.purpose !== 'Fixed Lecture') h += `<li><strong>${data.room}</strong>: ${data.purpose} (${data.timeFrom}-${data.timeTo}) by ${data.uName}</li>`;
+            });
+            document.getElementById('reportContent').innerHTML = h + '</ul>';
+        }
+
+        function listenForVIPNotifications() {
+            db.collection('bookings').where('status','==','approved').onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "modified" && change.doc.data().room.includes('(MP)')) {
+                        const notif = document.getElementById('vipNotifications');
+                        notif.style.display = 'block';
+                        notif.innerHTML += `<strong>VIP Alert:</strong> Branch Director approved MP booking for ${change.doc.data().room}.<br>`;
+                    }
+                });
+            });
+        }
+
+        async function buildCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = `<div class="cal-cell cal-header">Time</div><div class="cal-cell cal-header">Sun</div><div class="cal-cell cal-header">Mon</div><div class="cal-cell cal-header">Tue</div><div class="cal-cell cal-header">Wed</div><div class="cal-cell cal-header">Thu</div><div class="cal-cell cal-header">Fri</div><div class="cal-cell cal-header">Sat</div>`;
+            const times = ['08:00', '10:00', '12:00', '14:00'];
+            
+            const snap = await db.collection('bookings').where('status','==','approved').get();
+            const events = [];
+            snap.forEach(d => events.push(d.data()));
+
+            times.forEach(t => {
+                grid.innerHTML += `<div class="cal-cell cal-header">${t}</div>`;
+                for(let i=0; i<7; i++) {
+                    let cellEvents = '';
+                    events.forEach(ev => {
+                        if(ev.date && new Date(ev.date).getDay() === i && ev.timeFrom <= t && ev.timeTo > t) {
+                            let cl = 'event-yellow';
+                            if(ev.purpose === 'Fixed Lecture') cl = 'event-blue';
+                            if(ev.room.includes('(MP)')) cl = 'event-green';
+                            cellEvents += `<div class="${cl}">${ev.room}<br>${ev.purpose}</div>`;
+                        }
+                    });
+                    grid.innerHTML += `<div class="cal-cell">${cellEvents}</div>`;
+                }
+            });
+        }
+
+        // --- BRANCH DIRECTOR LOGIC ---
+        async function loadBDRequests() {
+            const snap = await db.collection('bookings').where('status','==','pending_branch_director').get();
+            let h = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                h += `<div style="margin: 10px 0; padding: 10px; background: var(--navy); border-radius: 6px;">
+                        <strong>${data.room}</strong> by ${data.uName} on ${data.date} (${data.timeFrom}-${data.timeTo})
+                        <button class="btn btn-primary" onclick="approveBDBooking('${doc.id}')">Final Approve</button>
+                      </div>`;
+            });
+            document.getElementById('bdRequests').innerHTML = h || '<p>No MP room requests pending.</p>';
+        }
+
+        async function approveBDBooking(id) {
+            await db.collection('bookings').doc(id).update({status:'approved'});
+            alert("MP Booking Approved!");
+            loadBDRequests();
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        init();
+    </script>
+</body>
+</html>

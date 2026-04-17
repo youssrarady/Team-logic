@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login</title>
+    <style>
+        body { background: #0A192F; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-card { background: #112240; padding: 40px; border-radius: 15px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #0A192F; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; background: #64FFDA; border: none; color: #0A192F; font-weight: bold; cursor: pointer; border-radius: 6px; margin-top: 10px; }
+        .subtitle { color: #ef4444; font-size: 13px; margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <h2>Management Portal</h2>
+        <p class="subtitle">Restricted Access. No New Registration.</p>
+        <input type="text" id="adminId" placeholder="Employee ID">
+        <input type="password" id="adminPass" placeholder="Password">
+        <button class="btn" onclick="handleAdminLogin()">Secure Login</button>
+        <br><br>
+        <a href="index.html" style="color: #64FFDA; text-decoration: none; font-size: 14px;">Return to Home</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="config.js"></script> 
+    <script>
+        async function handleAdminLogin() {
+            const id = document.getElementById('adminId').value;
+            const pass = document.getElementById('adminPass').value;
+
+            try {
+                // Check Firebase first for dynamically added admins/heads
+                const user = await db.collection('users').doc(id).get();
+                if (user.exists) {
+                    const data = user.data();
+                    // We only check password if one is set in Firebase, otherwise we assume it's just ID-based for legacy
+                    if (!data.password || data.password === pass) {
+                        const role = data.role;
+                        if (role === 'Admin' || role === 'Secretary' || role === 'Branch Director' || role === 'Head') {
+                            localStorage.setItem('employeeId', id);
+                            localStorage.setItem('userRole', role === 'Head' ? 'Branch Director' : role);
+                            localStorage.setItem('userName', data.name || role);
+                            window.location.href = 'dashboard.html';
+                            return; // Success, exit function
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Firebase fetch error, falling back to hardcoded IDs: ", error);
+            }
+
+            // Fallback for hardcoded legacy IDs
+            if (id === '241008855') {
+                localStorage.setItem('employeeId', id);
+                localStorage.setItem('userRole', 'Admin');
+                localStorage.setItem('userName', 'Akram');
+                window.location.href = 'dashboard.html';
+            } else if (id === '241009900') {
+                localStorage.setItem('employeeId', id);
+                localStorage.setItem('userRole', 'Secretary');
+                localStorage.setItem('userName', 'Rania');
+                window.location.href = 'dashboard.html';
+            } else if (id === '241001111') { // Fallback Branch Director
+                localStorage.setItem('employeeId', id);
+                localStorage.setItem('userRole', 'Branch Director');
+                localStorage.setItem('userName', 'Faisal');
+                window.location.href = 'dashboard.html';
+            } else {
+                alert("Invalid Credentials or Unauthorized Access.");
+            }
+        }
+    </script>
+</body>
+</html>

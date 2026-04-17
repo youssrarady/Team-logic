@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Booking Form - AASTMT Room Management System</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --navy-blue: #0A192F;
+            --white: #FFFFFF;
+            --light-blue: #112240;
+            --accent: #64FFDA;
+            --text-main: #CCD6F6;
+            --text-secondary: #8892B0;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--navy-blue);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .form-container {
+            background-color: var(--light-blue);
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 30px -15px rgba(2, 12, 27, 0.7);
+        }
+
+        .form-container h2 {
+            color: var(--white);
+            margin-top: 0;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--navy-blue);
+            border: 1px solid var(--text-secondary);
+            border-radius: 6px;
+            color: var(--white);
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .flex-row .form-group {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            accent-color: var(--accent);
+            width: 16px;
+            height: 16px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--accent);
+            color: var(--navy-blue);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: opacity 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .flex-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>Employee Booking Form</h2>
+        <form id="bookingForm" onsubmit="submitBooking(event)">
+            <div class="form-group">
+                <label for="roomName">Room Name</label>
+                <select id="roomName" class="form-control" required>
+                    <option value="">Select a room...</option>
+                    <option value="Room 101">Room 101</option>
+                    <option value="Room 102">Room 102</option>
+                    <option value="Conference Hall">Conference Hall</option>
+                    <option value="Lab A">Lab A</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="bookingDate">Date</label>
+                <input type="date" id="bookingDate" class="form-control" required>
+            </div>
+            
+            <div class="flex-row">
+                <div class="form-group">
+                    <label for="timeFrom">Time From</label>
+                    <input type="time" id="timeFrom" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="timeTo">Time To</label>
+                    <input type="time" id="timeTo" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="purpose">Purpose</label>
+                <select id="purpose" class="form-control" required>
+                    <option value="">Select purpose...</option>
+                    <option value="Lecture">Lecture</option>
+                    <option value="Event">Event</option>
+                    <option value="Meeting">Meeting</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Technical Requirements</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="reqLaptop" value="Laptop"> Laptop
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="reqMic" value="Mic" onchange="toggleMicQuantity()"> Mobile Microphones
+                    </label>
+                </div>
+                
+                <!-- Quantity for Mobile Microphones -->
+                <div id="micQuantityContainer" style="display: none; margin-top: 12px;">
+                    <label for="micQuantity" style="font-size: 14px; font-weight: 600; color: var(--text-main);">Quantity of Microphones:</label>
+                    <input type="number" id="micQuantity" class="form-control" min="1" value="1" style="width: 100px; margin-top: 4px;">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Submit Booking</button>
+        </form>
+    </div>
+
+    <!-- External Configuration for Firebase -->
+    <script src="config.js"></script>
+    <script>
+        function toggleMicQuantity() {
+            const reqMic = document.getElementById('reqMic').checked;
+            document.getElementById('micQuantityContainer').style.display = reqMic ? 'block' : 'none';
+        }
+
+        async function submitBooking(e) {
+            e.preventDefault();
+            
+            const roomName = document.getElementById('roomName').value;
+            const date = document.getElementById('bookingDate').value;
+            const timeFrom = document.getElementById('timeFrom').value;
+            const timeTo = document.getElementById('timeTo').value;
+            const purpose = document.getElementById('purpose').value;
+            
+            const reqLaptop = document.getElementById('reqLaptop').checked;
+            const reqMic = document.getElementById('reqMic').checked;
+            const micQuantity = reqMic ? parseInt(document.getElementById('micQuantity').value) || 1 : 0;
+            
+            // Optional: attach the user name if available in localStorage
+            const userName = localStorage.getItem('userName') || 'Unknown Employee';
+
+            try {
+                // Write to the 'bookings' collection in Firebase
+                await db.collection('bookings').add({
+                    employeeName: userName,
+                    roomName: roomName,
+                    date: date,
+                    timeFrom: timeFrom,
+                    timeTo: timeTo,
+                    purpose: purpose,
+                    requirements: {
+                        laptop: reqLaptop,
+                        mic: reqMic,
+                        micQuantity: micQuantity
+                    },
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Show success message
+                alert('Success: Room booking request has been submitted and securely saved to Firebase!');
+                
+                // Reset the form
+                document.getElementById('bookingForm').reset();
+                toggleMicQuantity(); // Hide quantity field
+            } catch (error) {
+                console.error("Error saving booking to Firebase:", error);
+                alert('Failed to submit booking. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>
